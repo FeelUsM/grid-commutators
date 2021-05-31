@@ -2,6 +2,8 @@ import form
 import re
 f = form.open("form -l",keep_log=100)
 
+print('=== python started ===')
+
 k = [[" 1 ", " 1 ", " 1 ", " 1 "], 
      [" 1 ", " 1 ", " i_", "-i_"], 
      [" 1 ", "-i_", " 1 ", " i_"], 
