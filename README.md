@@ -33,9 +33,7 @@ ln -s /cygdrive/c/Users/<USERNAME>/<YOUR WORK DIRECTORY>/ work
 
 ## Примеры
 
-пример математики находится в `C:\cygwin64\home\<USERNAME>\grid-commutators\test.nb`
+Пример математики находится в `C:\cygwin64\home\<USERNAME>\grid-commutators\test.nb`.
+Не забудьте поменять переменные `cygroot` и `cyghome`.
 
-для запуска юпитер-ноутбука выполняйте следующую команду
-`jupyter notebook`
-
-примеры в папке grid-commutators
+Для запуска юпитер-ноутбука выполняйте следующую команду `jupyter notebook`. Примеры юпитер-ноутбука в папке grid-commutators.
