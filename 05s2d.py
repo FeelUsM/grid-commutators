@@ -44,16 +44,6 @@ S x,y,z;
 Table if(x?int_,y?,z?);
 Fill if() = deltap_(x)*y+delta_(x)*z;
 
-*--- expand ---
-#procedure expand
-splitarg Comm,1;
-repeat id Comm(a?,a1?,?centr,b?) = Comm(a,b) + Comm(a1,?centr,b);
-id Comm(a?,a1?,b?) = Comm(a,b)+Comm(a1,b);
-splitarg Comm,2;
-repeat id Comm(a?,?centr,b1?,b?) = Comm(a,b) + Comm(a,?centr,b1);
-id Comm(a?,b1?,b?) = Comm(a,b)+Comm(a,b1);
-#endprocedure
-
 *--- overlapping ---
 #procedure overlapping
 argument Comm;
@@ -125,18 +115,29 @@ endif;
 #endprocedure
 '''
 
-with open('in1', 'r') as f:
-    s = f.read().replace('\n', '').replace('[','(').replace(']',')').split('""')
+with open('in1', 'r') as file:
+    s = file.read().replace('\n', '').replace('[','(').replace(']',')').split('""')
 s[0] = s[0].replace('{','').replace('}','').replace(' ','')
 s[3] = int(s[3])
-[syms,H,N,k]=s
+[syms,H,N,k,t]=s
 
 f.close()
-f = form.open("form -l",keep_log=100)
+if t=='1':
+	f = form.open("form -l",keep_log=100)
+else:
+	f = form.open("tform -w"+t+" -l",keep_log=100)
+
 f.write('''
 on stats;
 '''+procedures+'Sym '+syms+';'+
 'Local H  = '+H+';'+
+'''
+id S(a?)=a;
+Mul Comm(1,1);
+repeat id Comm(a?,b?)*cx?(?xxx) = Comm(a*cx(?xxx),b);
+.sort
+skip;
+'''+
 'Local N1 = '+N+';'+
 '''
 id S(a?)=a;
@@ -145,38 +146,40 @@ id S(a?)=a;
 '''
 Skip;
 
-Local N2 = Comm(H,N1);
+Local N2 = H*N1;
+repeat id Comm(a?,b?)*cx?(?xxx) = Comm(a,b*cx(?xxx));
 
-#call expand
 #call overlapping
 id Comm(a?,b?) = S(a)*b-S(b)*a;
 #call multiply
 .sort
 skip; nskip N2;
-Local N1 = N2;
 #call trim
 
 format mathematica;
+.sort
+
+Local N1 = N2;
 .sort
 '''*(k-1)+
 '''
 Skip;
 
-Local N2 = Comm(H,N1);
+Local N2 = H*N1;
+repeat id Comm(a?,b?)*cx?(?xxx) = Comm(a,b*cx(?xxx));
 
-#call expand
 #call overlapping
 id Comm(a?,b?) = S(a)*b-S(b)*a;
 #call multiply
 .sort
 skip; nskip N2;
-Local N1 = N2;
 #call trimS
 
 format mathematica;
 .sort
 ''')
-tmp = re.sub(r'i_','I',f.read('N2'))
 
-with open('out1', 'w') as f:
-    f.write(tmp)
+with open('out1', 'w') as file:
+    file.write(re.sub(r'i_','I',f.read('N2')))
+	
+f.close()
