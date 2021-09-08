@@ -161,7 +161,7 @@ id Comm(a?,b?) = S(a)*b-S(b)*a;
 #call multiply
 .sort
 skip; nskip N2;
-#call trim
+#call trimS
 
 format mathematica;
 .sort
@@ -169,9 +169,10 @@ format mathematica;
 Skip;
 
 Local N1 = N2;
+id S(t?) = t;
 .sort
 Skip;
-'''.format(i+1,'#write <io/out{}> "%E" , N1'.format(i+1) if si else '') for i in range(k-1) 
+'''.format(i+1,'#write <io/out{}> "%E" , N2'.format(i+1) if si else '') for i in range(k-1) 
 )+
 
 '''
