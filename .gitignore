@@ -130,5 +130,6 @@ dmypy.json
 
 #---------------------
 *.str
-in1
-out1
+io/
+form/
+python-3.8.10-embed-amd64/
