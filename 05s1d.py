@@ -12,20 +12,20 @@ try:
 	     [" 1 ", " i_", "-i_", " 1 "]]
 
 
-	n = [[" 1       ", "cx(i1,i2)", "cy(i1,i2)", "cz(i1,i2)"], 
-	     ["cx(i1,i2)", " 1       ", "cz(i1,i2)", "cy(i1,i2)"], 
-	     ["cy(i1,i2)", "cz(i1,i2)", " 1       ", "cx(i1,i2)"], 
-	     ["cz(i1,i2)", "cy(i1,i2)", "cx(i1,i2)", " 1       "]]
+	n = [[" 1    ", "cx(i1)", "cy(i1)", "cz(i1)"], 
+	     ["cx(i1)", " 1    ", "cz(i1)", "cy(i1)"], 
+	     ["cy(i1)", "cz(i1)", " 1    ", "cx(i1)"], 
+	     ["cz(i1)", "cy(i1)", "cx(i1)", " 1    "]]
 
 	c = ["1","cx","cy","cz"]
 	s = ["1","sx","sy","sz"]
-	rules = '\n'.join('id ifmatch->endarg '+c[i]+'(i1?,i2?)*'+s[j]+'(i1?,i2?) = '+
+	rules = '\n'.join('id ifmatch->endarg '+c[i]+'(i1?)*'+s[j]+'(i1?) = '+
 			  k[i][j]+'*'+str(n[j][i])+';' 
 	       for i in range(1,4) for j in range(1,4))
 
 	procedures = '''
-* === 05s2d ===
-	
+* === 05s1d ===
+
 cfun   cx,cy,cz,cc; *cten
 set CC:cx,cy,cz;
 nfun   sx,sy,sz,sc;
@@ -51,31 +51,23 @@ Fill if() = deltap_(x)*y+delta_(x)*z;
 #procedure overlapping
 *--- overlapping ---
 argument Comm;
-    multiply S(1,1,1);
-    repeat id S(k1?,k2?,t?)*cc?CC(i1?,i2?) = S(max_(k1,i1),max_(k2,i2),t*cc(i1,i2));
+    multiply S(1,1);
+    repeat id S(k1?,t?)*cc?CC(i1?) = S(max_(k1,i1),t*cc(i1));
+* -> koef*S(max(i...),cc(i)...)
 endargument;
 
-id Comm(S(k11?$k11max,k21?$k21max,t1?),S(k12?$k12max,k22?$k22max,t2?)) 
-	= Comm(S(k11,k21,t1),S(k12,k22,t2));
+id Comm(S(k11?$k11max,t1?),S(k12?$k12max,t2?)) 
+	= Comm(S(k11,t1),S(k12,t2));
 $k1max = 2*$k11max + 2*$k12max;
-$k2max = 2*$k21max + 2*$k22max;
 
 id Comm(a?,b?) = a*b;
 id S(?ss1)*S(?ss2) = Comm(S(?ss1),S(?ss2));
-id Comm(S(n1?,k1?,a1?),S(n2?,k2?,a2?)) = 
-                  Comm(S(k1,        a1),S(k2,        a2))  + 
-    sum_(i,1,n2-1,Comm(S(k1,SS(i,1)*a1),S(k2,        a2))) +
-    sum_(i,1,n1-1,Comm(S(k1,        a1),S(k2,SS(i,1)*a2)));
-argument Comm; argument S,2;
-    repeat id SS(i?,t?)*cc?CC(j?,k?) = SS(i,t*cc(i+j,k));
-    id SS(i?,a?) = a;
-endargument;endargument;
 id Comm(S(n1?,a1?),S(n2?,a2?)) = 
                   Comm(        a1,        a2) + 
     sum_(i,1,n2-1,Comm(SS(i,1)*a1,        a2)) +
     sum_(i,1,n1-1,Comm(        a1,SS(i,1)*a2));
 argument Comm;
-    repeat id SS(i?,t?)*cc?CC(k?,j?) = SS(i,t*cc(k,i+j));
+    repeat id SS(i?,t?)*cc?CC(j?) = SS(i,t*cc(i+j));
     id SS(i?,a?) = a;
 endargument;
 #endprocedure
@@ -84,12 +76,12 @@ endargument;
 *--- multiply ---
 *id Comm(a?,b?) = S(a)*b-S(b)*a;
 label repeat;
-    id ifnomatch->endrepeat S(a?)*cc?CC[n](i1?,i2?) = S(a*SC[n](i1,i2));
+    id ifnomatch->endrepeat S(a?)*cc?CC[n](i1?) = S(a*SC[n](i1));
     argument S;
 *        id cc?CC(i1?,i2?)*sc?SC(i1?,i2?) = 1;
 '''+rules+\
 '''
-        id sc?SC[n?](i1?,i2?) = CC[n](i1,i2);
+        id sc?SC[n?](i1?) = CC[n](i1);
         label endarg;
     endargument;
 goto repeat;
@@ -100,26 +92,26 @@ id S(a?) = a;
 
 #procedure trim
 *--- trim ---
-if(match(cc?CC(i?,j?)));
-    multiply S($k1max,$k2max,1);
-    repeat id S(n1?,n2?,t?)*cc?CC(i1?,i2?) = S(min_(n1,i1),min_(n2,i2),t*cc(i1,i2));
-    id ifmatch->endif S(1,1,t?) = t;
-        id S(n1?,n2?,t?) = S(n1-1,n2-1,1)*t;
-        repeat id S(n1?,n2?,t?)*cc?CC(i1?,i2?) = S(n1,n2,t*cc(i1-n1,i2-n2));
-        id S(n1?,n2?,t?) = t;
+if(match(cc?CC(i?)));
+    multiply S($k1max,1);
+    repeat id S(n1?,t?)*cc?CC(i1?) = S(min_(n1,i1),t*cc(i1));
+    id ifmatch->endif S(1,t?) = t;
+        id S(n1?,t?) = S(n1-1,1)*t;
+        repeat id S(n1?,t?)*cc?CC(i1?) = S(n1,t*cc(i1-n1));
+        id S(n1?,t?) = t;
     label endif;
 endif;
 #endprocedure
 
 #procedure trimS
 *--- trimS ---
-if(match(cc?CC(i?,j?)));
-    multiply S($k1max,$k2max,1);
-    repeat id S(n1?,n2?,t?)*cc?CC(i1?,i2?) = S(min_(n1,i1),min_(n2,i2),t*cc(i1,i2));
-    id ifmatch->endif S(1,1,t?) = S(t);
-        id S(n1?,n2?,t?) = S(n1-1,n2-1,1)*t;
-        repeat id S(n1?,n2?,t?)*cc?CC(i1?,i2?) = S(n1,n2,t*cc(i1-n1,i2-n2));
-        id S(n1?,n2?,t?) = S(t);
+if(match(cc?CC(i?)));
+    multiply S($k1max,1);
+    repeat id S(n1?,t?)*cc?CC(i1?) = S(min_(n1,i1),t*cc(i1));
+    id ifmatch->endif S(1,t?) = S(t);
+        id S(n1?,t?) = S(n1-1,1)*t;
+        repeat id S(n1?,t?)*cc?CC(i1?) = S(n1,t*cc(i1-n1));
+        id S(n1?,t?) = S(t);
     label endif;
 endif;
 #endprocedure
