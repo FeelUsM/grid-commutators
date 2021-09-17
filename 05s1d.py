@@ -36,6 +36,9 @@ Function S,SS,Comm;
 auto Symbols a,b,t;
 auto Symbol n,i,j,k; * indices
 
+cfun koef;
+polyfun koef;
+
 S n,n1,n2,x;
 Table ident(x?);  Fill ident() = x;
 Table prod(n?symbol_,n1?int_,n2?int_,x?);
@@ -127,18 +130,27 @@ endif;
 	with open('io/code.frm', 'w') as f:
 		f.write('''
 on stats;
-'''+procedures+'Sym '+syms+';'+
+'''+procedures+'''
+* === H ===
+'''+'Sym '+syms+';\n'+
 'Local H  = '+H+';'+
 '''
-id S(a?)=a;
-Mul Comm(1,1);
-repeat id Comm(a?,b?)*cx?(?xxx) = Comm(a*cx(?xxx),b);
+* =========
+id S(a?)*b?=Comm(a,1)*koef(b);
+id S(a?)=Comm(a,1);
+* Mul Comm(1,1);
+* repeat id Comm(a?,b?)*cx?(?xxx) = Comm(a*cx(?xxx),b);
+* Print;
 .sort
 skip;
+* === N ===
 '''+
 'Local N1 = '+N+';'+
 '''
+* =========
+id S(a?)*b?=a*koef(b);
 id S(a?)=a;
+* Print;
 .sort
 Skip;
 '''+
@@ -148,22 +160,25 @@ Skip;
 * === iteration {} ===
 
 Local N2 = H*N1;
-repeat id Comm(a?,b?)*cx?(?xxx) = Comm(a,b*cx(?xxx));
+repeat id Comm(a?,b?)*cx?CC(?xxx) = Comm(a,b*cx(?xxx));
 
 #call overlapping
 id Comm(a?,b?) = S(a)*b-S(b)*a;
 #call multiply
+* Print;
 .sort
 skip; nskip N2;
 #call trimS
 
 format mathematica;
+* Print;
 .sort
 {}
 Skip;
 
 Local N1 = N2;
 id S(t?) = t;
+* Print;
 .sort
 Skip;
 '''.format(i+1,'#write <io/out{}> "%E" , N2'.format(i+1) if si else '') for i in range(k-1) 
@@ -173,17 +188,18 @@ Skip;
 * === iteration {} ===
 
 Local N2 = H*N1;
-repeat id Comm(a?,b?)*cx?(?xxx) = Comm(a,b*cx(?xxx));
+repeat id Comm(a?,b?)*cx?CC(?xxx) = Comm(a,b*cx(?xxx));
 
 #call overlapping
 id Comm(a?,b?) = S(a)*b-S(b)*a;
 #call multiply
+* Print;
 .sort
 skip; nskip N2;
 #call trimS
 
 format mathematica;
-*Print;
+* Print;
 .sort
 Skip;
 #write <io/out{}> "%E" , N2
@@ -206,5 +222,5 @@ except Exception as e:
 	try:
 		traceback.print_exception(type(e), e, sys.last_traceback)
 	finally:
-		print('!!!error!!!')
+		print('!!!error!!!, press enter')
 		input()
