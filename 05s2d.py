@@ -58,13 +58,8 @@ argument Comm;
     repeat id S(k1?,k2?,t?)*cc?CC(i1?,i2?) = S(max_(k1,i1),max_(k2,i2),t*cc(i1,i2));
 endargument;
 
-id Comm(S(k11?$k11max,k21?$k21max,t1?),S(k12?$k12max,k22?$k22max,t2?)) 
-	= Comm(S(k11,k21,t1),S(k12,k22,t2));
-$k1max = 2*$k11max + 2*$k12max;
-$k2max = 2*$k21max + 2*$k22max;
-
-id Comm(a?,b?) = a*b;
-id S(?ss1)*S(?ss2) = Comm(S(?ss1),S(?ss2));
+*id Comm(a?,b?) = a*b;
+*id S(?ss1)*S(?ss2) = Comm(S(?ss1),S(?ss2));
 id Comm(S(n1?,k1?,a1?),S(n2?,k2?,a2?)) = 
                   Comm(S(k1,        a1),S(k2,        a2))  + 
     sum_(i,1,n2-1,Comm(S(k1,SS(i,1)*a1),S(k2,        a2))) +
@@ -104,7 +99,7 @@ id S(a?) = a;
 #procedure trim
 *--- trim ---
 if(match(cc?CC(i?,j?)));
-    multiply S($k1max,$k2max,1);
+    id once cc?CC(i?,j?) = S(i,j,cc(i,j));
     repeat id S(n1?,n2?,t?)*cc?CC(i1?,i2?) = S(min_(n1,i1),min_(n2,i2),t*cc(i1,i2));
     id ifmatch->endif S(1,1,t?) = t;
         id S(n1?,n2?,t?) = S(n1-1,n2-1,1)*t;
@@ -117,7 +112,7 @@ endif;
 #procedure trimS
 *--- trimS ---
 if(match(cc?CC(i?,j?)));
-    multiply S($k1max,$k2max,1);
+    id once cc?CC(i?,j?) = S(i,j,cc(i,j));
     repeat id S(n1?,n2?,t?)*cc?CC(i1?,i2?) = S(min_(n1,i1),min_(n2,i2),t*cc(i1,i2));
     id ifmatch->endif S(1,1,t?) = S(t);
         id S(n1?,n2?,t?) = S(n1-1,n2-1,1)*t;
@@ -138,6 +133,7 @@ endif;
 	with open('io/code.frm', 'w') as f:
 		f.write('''
 on stats;
+on ThreadStats;
 '''+procedures+'''
 * === H ===
 Sym '''+syms+';\n'+
@@ -171,11 +167,14 @@ repeat id Comm(a?,b?)*cx?CC(?xxx) = Comm(a,b*cx(?xxx));
 #call overlapping
 id Comm(a?,b?) = S(a)*b-S(b)*a;
 #call multiply
+*print;
 .sort
 skip; nskip N2;
 #call trimS
 
 format mathematica;
+*print +f "<%W> %t";
+*print;
 .sort
 {}
 Skip;
@@ -196,12 +195,14 @@ repeat id Comm(a?,b?)*cx?CC(?xxx) = Comm(a,b*cx(?xxx));
 #call overlapping
 id Comm(a?,b?) = S(a)*b-S(b)*a;
 #call multiply
+*print;
 .sort
 skip; nskip N2;
 #call trimS
 
 format mathematica;
 *Print;
+*print +f "<%W> %t";
 .sort
 Skip;
 #write <io/out{}> "%E" , N2
@@ -210,10 +211,13 @@ Skip;
 
 
 	if t=='1':
-		f = os.system("form"+os.sep+"form -l io/code.frm")
+		invoke = "form"+os.sep+"form -l io/code.frm"
+		print(invoke)
+		os.system(invoke)
 	else:
-		f = os.system("form"+os.sep+"tform -w"+t+" -l io/code.frm")
-
+		invoke = "form"+os.sep+"tform -w"+t+" -l io/code.frm"
+		print(invoke)
+		os.system(invoke)
 
 
 	with open('io/out{}'.format(k), 'r') as f2:

@@ -59,12 +59,8 @@ argument Comm;
 * -> koef*S(max(i...),cc(i)...)
 endargument;
 
-id Comm(S(k11?$k11max,t1?),S(k12?$k12max,t2?)) 
-	= Comm(S(k11,t1),S(k12,t2));
-$k1max = 2*$k11max + 2*$k12max;
-
-id Comm(a?,b?) = a*b;
-id S(?ss1)*S(?ss2) = Comm(S(?ss1),S(?ss2));
+*id Comm(a?,b?) = a*b;
+*id S(?ss1)*S(?ss2) = Comm(S(?ss1),S(?ss2));
 id Comm(S(n1?,a1?),S(n2?,a2?)) = 
                   Comm(        a1,        a2) + 
     sum_(i,1,n2-1,Comm(SS(i,1)*a1,        a2)) +
@@ -96,7 +92,7 @@ id S(a?) = a;
 #procedure trim
 *--- trim ---
 if(match(cc?CC(i?)));
-    multiply S($k1max,1);
+    id once cc?CC(i1?) = S(i1,cc(i1));
     repeat id S(n1?,t?)*cc?CC(i1?) = S(min_(n1,i1),t*cc(i1));
     id ifmatch->endif S(1,t?) = t;
         id S(n1?,t?) = S(n1-1,1)*t;
@@ -109,7 +105,7 @@ endif;
 #procedure trimS
 *--- trimS ---
 if(match(cc?CC(i?)));
-    multiply S($k1max,1);
+    id once cc?CC(i1?) = S(i1,cc(i1));
     repeat id S(n1?,t?)*cc?CC(i1?) = S(min_(n1,i1),t*cc(i1));
     id ifmatch->endif S(1,t?) = S(t);
         id S(n1?,t?) = S(n1-1,1)*t;
