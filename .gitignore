@@ -130,6 +130,7 @@ dmypy.json
 
 #---------------------
 *.str
-io/
+io*/
 form/
 python-3.8.10-embed-amd64/
+grid-commutators.zip
