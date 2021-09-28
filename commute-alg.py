@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(
 # -r --rules доп.правила преобразования коэфициентов
 
 parser.add_argument('--continue','-c',action='store_true',dest='cont')
+parser.add_argument('--force'   ,'-f',action='store_true')
 parser.add_argument('--dim'     ,'-d',type=int,choices=[1,2,3])
 parser.add_argument('--alg'     ,'-a')
 parser.add_argument('--syms'    ,'-S')
@@ -27,8 +28,10 @@ parser.add_argument('--stop'    ,'-s',type=int)
 parser.add_argument('--threads' ,'-t',type=int)
 parser.add_argument('--rules'   ,'-r',dest='k_rules') # koefficient rules
 
+#print(sys.argv,file=sys.stderr)
 args = parser.parse_args()
 #print("cont   ",args.cont   )
+#print("force  ",args.force  )
 #print("dim    ",args.dim    )
 #print("alg    ",args.alg    )
 #print("syms   ",args.syms   )
@@ -112,13 +115,14 @@ else:
 	# очищает текущую директорию с вопросом
 	lf = [ x for x in os.listdir() if x!='run.log' ]
 	if len(lf)>0:
-		if len(lf)>1:
+		if len(lf)>1 and not args.force:
 			repl = ''
 			while len(repl)!=1 or repl not in 'yYnN':
 				print('хотите удалить все файлы (',len(lf),'шт) из',os.getcwd(),' (y/n) ?')
 				repl =input()
 			if repl in 'nN':
-				print('чтобы продолжить вычисления, запустите программу с параметром --continue или -c')
+				print('чтобы продолжить вычисления, запустите программу с параметром --continue или -c',file=sys.stderr)
+				print('чтобы не получать этот запрос, запустите программу с параметром --force или -f',file=sys.stderr)
 				exit(1)
 		for rf in lf:
 			try:
@@ -148,6 +152,7 @@ else:
 	with open('out0', 'w') as outf:
 		print(re.sub(r'\bI\b','i_',args.N.replace('\n', '').replace('[','(').replace(']',')')),file=outf)
 	
+print("arguments:",file=sys.stderr)
 print("cont   ",args.cont   ,file=sys.stderr)
 print("dim    ",args.dim    ,file=sys.stderr)
 print("alg    ",args.alg    ,file=sys.stderr)
@@ -504,11 +509,11 @@ Skip;
 	# вызываем code_name
 	if args.threads==1:
 		invoke = " {}form       -l {}".format('..{s}form{s}'.format(s=os.sep),             code_name)
-		print(invoke,file=sys.stderr)
+		print('run form:',invoke,file=sys.stderr)
 		os.system(invoke)
 	else:
 		invoke = "{}tform -w{} -l {}".format('..{s}form{s}'.format(s=os.sep),args.threads,code_name)
-		print(invoke,file=sys.stderr)
+		print('run form:',invoke,file=sys.stderr)
 		os.system(invoke)
 
 
