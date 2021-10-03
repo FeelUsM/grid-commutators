@@ -111,9 +111,13 @@ else:
 		args.threads = 1
 	if args.k_rules!=None:
 		args.k_rules = args.k_rules.strip()
+	else:
+		args.k_rules = ''
 		
 	# очищает текущую директорию с вопросом
-	lf = [ x for x in os.listdir() if x!='run.log' ]
+	H_include = re.sub(r'#include[ \-]+(.*)',r'\1',args.H) if args.H.startswith('#include') else ''
+	N_include = re.sub(r'#include[ \-]+(.*)',r'\1',args.N) if args.N.startswith('#include') else ''
+	lf = [ x for x in os.listdir() if x!='run.log' and x!=H_include and x!=N_include ]
 	if len(lf)>0:
 		if len(lf)>1 and not args.force:
 			repl = ''
@@ -149,8 +153,19 @@ else:
 	code_name = 'code1.frm'
 	
 	# создаем out0
-	with open('out0', 'w') as outf:
-		print(re.sub(r'\bI\b','i_',args.N.replace('\n', '').replace('[','(').replace(']',')')),file=outf)
+	if H_include:
+		with open(H_include,'r') as inf:
+			with open('tmp','w') as outf:
+				print(re.sub(r'\bI\b','i_',inf.read().replace('\n', '').replace('[','(').replace(']',')')),file=outf)
+		os.remove(H_include)
+		os.rename('tmp',H_include)
+	if N_include:
+		with open(N_include,'r') as inf:
+			with open('out0','w') as outf:
+				print(re.sub(r'\bI\b','i_',inf.read().replace('\n', '').replace('[','(').replace(']',')')),file=outf)
+	else:
+		with open('out0', 'w') as outf:
+			print(re.sub(r'\bI\b','i_',args.N.replace('\n', '').replace('[','(').replace(']',')')),file=outf)
 	
 print("arguments:",file=sys.stderr)
 print("cont   ",args.cont   ,file=sys.stderr)
@@ -168,6 +183,7 @@ dim = args.dim
 last_out_N = max(map(lambda s: int(re.sub(r'out(.+)',r'\1',s)) ,filter(lambda s: re.match(r'out.+',s),os.listdir())))
 last_out = 'out'+str(last_out_N)
 
+print('calculate from {} to {}'.format(last_out_N,args.stop),file=sys.stderr)
 # если stop > last_out_N
 if args.stop > last_out_N:
 	# создаем code - code_name
@@ -211,11 +227,23 @@ if args.stop > last_out_N:
 	except FileNotFoundError:
 		print('не могу открыть файл алгебры',args.alg,file=sys.stderr)
 		exit(1)
-	print('rule_syms',rule_syms)
-	print('c_ops    ',c_ops)	
-	print('s_ops    ',s_ops)
-	print('rules    ',rules)
-	print('k_rules  ',k_rules)
+	print('rule_syms',rule_syms	,file=sys.stderr)
+	print('c_ops    ',c_ops		,file=sys.stderr)	
+	print('s_ops    ',s_ops		,file=sys.stderr)
+	#print('rules    ',rules		,file=sys.stderr)
+	print('k_rules  ',k_rules	,file=sys.stderr)
+	
+	k_rules = \
+'''
+argument koef;
+	{r1}
+	{r2}
+endargument;
+'''.format(r1=k_rules, r2=args.k_rules) if k_rules or args.k_rules else ''
+
+	print('k_rules final:',file=sys.stderr)
+	print(k_rules,file=sys.stderr)
+	
 	
 	# проверяем допустимость имен операторов и смволов
 	used_syms = 'cc,sc,CC,SC,koef,H,N'.split(',')
@@ -225,7 +253,7 @@ if args.stop > last_out_N:
 			print('illegal symbol',sym,file=sys.stderr)
 			exit(1)
 		for patt in used_sympatts:
-			if re.match(patt+r'\d*',sym):
+			if re.match('^'+patt+r'\d*$',sym):
 				print('illegal symbol',sym,file=sys.stderr)
 				exit(1)
 	
@@ -398,22 +426,30 @@ endif;
 
 {arg_syms}
 * === H ===
-Local H  = {H};
-id S(a?)*b?=Comm(a,1)*koef(b);
+Local H  = 
+{H}
+;
+id S(a?)*b?=S(a)*koef(b);
+repeat id S(a?)*koef(b?)*t? = S(a)*koef(b*t);
 id S(a?)=Comm(a,1);
+{k_rules}
 
+*Print;
 .sort
 skip;
 
 * === N ===
 Local N = 
-#include {last_out}
+#include - {last_out}
 ;
 if(0==match(S(a?)*koef(b?)));
     id S(a?)*b?=S(a)*koef(b);
+    repeat id S(a?)*koef(b?)*t? = S(a)*koef(b*t);
 endif;
 *id S(a?)=S(a);
+{k_rules}
 
+*Print;
 .sort
 Skip; Nskip N;
 '''.format(
@@ -436,6 +472,7 @@ alg		=args.alg
 ,arg_syms	='' if args.syms=='{}' else 'sym {};'.format(args.syms.replace('{','').replace('}',''))
 ,H		=args.H
 ,last_out	=last_out
+,k_rules	=k_rules
 )+\
 ''.join(
 '''
@@ -462,46 +499,39 @@ Skip;
 
 .sort
 Skip; nskip N;
-'''.format(it=i,dim=dim,k_rules=
-	'''
-	argument koef;
-		{r1}
-		{r2}
-	endargument;
-	'''.format(r1=k_rules, r2=args.k_rules) if k_rules and args.k_rules else ''
-) for i in range(last_out_N+1,args.stop) 
+'''.format(it=i,dim=dim,k_rules=k_rules) for i in range(last_out_N+1,args.stop) 
 )+\
 '''
 * === iteration {it} ===
 
+*Print "in  : %t";
 multiply left H;
+*Print "  H in: %t";
 id Comm(a?,b?)*S(t?) = Comm(a,b*t);
+*Print "    mul : %t";
 #call overlapping{dim}d
+*Print "      olap: %t";
 id Comm(a?,b?) = S(a)*b-S(b)*a;
 #call multiply
+*Print "        mult: %t";
 
 *Print +f "<%W> %t";
 .sort
 skip; nskip N;
 
 #call trimS
+*Print "trim: %t";
 {k_rules}
 
 *Print +f "<%W> %t";
+format mathematica;
 .sort
 Skip;
 
 #write <out{it}> "%E" , N
 
 .end
-'''.format(it=args.stop,dim=dim,k_rules=
-	'''
-	argument koef;
-		{r1}
-		{r2}
-	endargument;
-	'''.format(r1=k_rules, r2=args.k_rules) if k_rules and args.k_rules else ''
-)
+'''.format(it=args.stop,dim=dim,k_rules=k_rules)
 
 	## записываем его
 	with open(code_name,'w') as cf:
@@ -521,6 +551,7 @@ Skip;
 if os.path.getsize('out{}'.format(args.stop))<100_000_000:
 	with open('out{}'.format(args.stop), 'r') as f2:
 		with open('out', 'w') as f1:
-			f1.write(re.sub(r'[ \n\r\t\v]','',re.sub(r'\bi_\b','I',f2.read().replace('(','[').replace(')',']'))))
+			f1.write(re.sub(r'[ \n\r\t\v]','',re.sub(r'\bi_\b','I',f2.read() #.replace('(','[').replace(')',']')
+			)))
 else:
 	print('file "out" too large for mathematica',file=sys.stderr)
