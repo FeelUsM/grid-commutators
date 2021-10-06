@@ -180,8 +180,13 @@ print("k_rules",args.k_rules,file=sys.stderr)
 dim = args.dim
 	
 # ищем последний last_out
-last_out_N = max(map(lambda s: int(re.sub(r'out(.+)',r'\1',s)) ,filter(lambda s: re.match(r'out.+',s),os.listdir())))
-last_out = 'out'+str(last_out_N)
+list_out = list(map(lambda s: int(re.sub(r'out(.+)\.sav',r'\1',s)) ,filter(lambda s: re.match(r'out.+\.sav',s),os.listdir())))
+if len(list_out)==0:
+	last_out_N = 0
+	last_out = 'out0'
+else:
+	last_out_N = max(list_out)
+	last_out = 'out{}.sav'.format(last_out_N)
 
 print('calculate from {} to {}'.format(last_out_N,args.stop),file=sys.stderr)
 # если stop > last_out_N
@@ -239,7 +244,7 @@ argument koef;
 	{r1}
 	{r2}
 endargument;
-'''.format(r1=k_rules, r2=args.k_rules) if k_rules or args.k_rules else ''
+'''.format(r1=k_rules, r2=args.k_rules) if k_rules or args.k_rules else '' ;
 
 	print('k_rules final:',file=sys.stderr)
 	print(k_rules,file=sys.stderr)
@@ -422,11 +427,31 @@ if(match(cc?CC({ind_patt})));
 endif;
 #endprocedure
 
-*--------------------------------------------------
-
 {arg_syms}
+.global
+*--------------------------------------------------
+'''.format(
+	alg		=args.alg
+	,dim		=args.dim
+	,c_ops		=','.join(c_ops)
+	,s_ops		=','.join(s_ops)
+	,rules		=rules
+	,rule_syms	='' if rule_syms=='' else 'sym {};'.format(rule_syms)
+
+	,ind_patt	=','.join('i{}?'.format(i+1) for i in range(dim)) #i1?,i2?
+	,ind_repl	=','.join('i{}'.format(i+1) for i in range(dim)) #i1,i2
+	,ind_patt_n	=','.join('n{}?'.format(i+1) for i in range(dim)) #n1?,n2?
+	,ind_repl_n	=','.join('n{}'.format(i+1) for i in range(dim)) #n1,n2
+	,min_ind	=','.join('min_(n{k},i{k})'.format(k=i+1) for i in range(dim)) #min_(n1,i1),min_(n2,i2)
+	,ind_1		=','.join('1'.format(i+1) for i in range(dim)) #1,1
+	,ind_n_minus_1	=','.join('n{}-1'.format(i+1) for i in range(dim)) #n1-1,n2-1
+	,ind_i_minus_n	=','.join('i{k}-n{k}'.format(k=i+1) for i in range(dim))#i1-n1,i2-n2
+
+	,arg_syms	='' if args.syms=='{}' else 'sym {};'.format(args.syms.replace('{','').replace('}',''))
+)+\
+('''
 * === H ===
-Local H  = 
+Global H  = 
 {H}
 ;
 id S(a?)*b?=S(a)*koef(b);
@@ -436,11 +461,11 @@ id S(a?)=Comm(a,1);
 
 *Print;
 .sort
-skip;
 
 * === N ===
-Local N = 
-#include - {last_out}
+hide;
+Global N = 
+#include - out0
 ;
 if(0==match(S(a?)*koef(b?)));
     id S(a?)*b?=S(a)*koef(b);
@@ -451,28 +476,24 @@ endif;
 
 *Print;
 .sort
-Skip; Nskip N;
 '''.format(
-alg		=args.alg
-,dim		=args.dim
-,c_ops		=','.join(c_ops)
-,s_ops		=','.join(s_ops)
-,rules		=rules
-,rule_syms	='' if rule_syms=='' else 'sym {};'.format(rule_syms)
-
-,ind_patt	=','.join('i{}?'.format(i+1) for i in range(dim)) #i1?,i2?
-,ind_repl	=','.join('i{}'.format(i+1) for i in range(dim)) #i1,i2
-,ind_patt_n	=','.join('n{}?'.format(i+1) for i in range(dim)) #n1?,n2?
-,ind_repl_n	=','.join('n{}'.format(i+1) for i in range(dim)) #n1,n2
-,min_ind	=','.join('min_(n{k},i{k})'.format(k=i+1) for i in range(dim)) #min_(n1,i1),min_(n2,i2)
-,ind_1		=','.join('1'.format(i+1) for i in range(dim)) #1,1
-,ind_n_minus_1	=','.join('n{}-1'.format(i+1) for i in range(dim)) #n1-1,n2-1
-,ind_i_minus_n	=','.join('i{k}-n{k}'.format(k=i+1) for i in range(dim))#i1-n1,i2-n2
-
-,arg_syms	='' if args.syms=='{}' else 'sym {};'.format(args.syms.replace('{','').replace('}',''))
-,H		=args.H
-,last_out	=last_out
-,k_rules	=k_rules
+	H		=args.H
+	,k_rules	=k_rules
+	) if last_out=='out0' else 
+'''
+Load {last_out};
+Global Ntmp = N;
+Global Htmp = H;
+.sort
+  skip Ntmp;
+  Delete storage;  * this clears all stored expressions
+  Drop Htmp;
+  G H = Htmp;
+  .sort
+  Hide H;
+  Drop Ntmp;
+  G N = Ntmp;
+'''.format(last_out=last_out)
 )+\
 ''.join(
 '''
@@ -486,19 +507,24 @@ id Comm(a?,b?) = S(a)*b-S(b)*a;
 
 *Print +f "<%W> %t";
 .sort
-skip; nskip N;
 
 #call trimS
 {k_rules}
 
 *Print +f "<%W> %t";
+.store
+save out{it}.sav;
+Global Ntmp = N;
+Global Htmp = H;
 .sort
-Skip;
-
-#write <out{it}> "%E" , N
-
-.sort
-Skip; nskip N;
+  skip Ntmp;
+  Delete storage;  * this clears all stored expressions
+  Drop Htmp;
+  G H = Htmp;
+  .sort
+  Hide H;
+  Drop Ntmp;
+  G N = Ntmp;
 '''.format(it=i,dim=dim,k_rules=k_rules) for i in range(last_out_N+1,args.stop) 
 )+\
 '''
@@ -517,7 +543,6 @@ id Comm(a?,b?) = S(a)*b-S(b)*a;
 
 *Print +f "<%W> %t";
 .sort
-skip; nskip N;
 
 #call trimS
 *Print "trim: %t";
@@ -527,9 +552,10 @@ skip; nskip N;
 format mathematica;
 .sort
 Skip;
-
 #write <out{it}> "%E" , N
-
+.store
+save out{it}.sav;
+Skip;
 .end
 '''.format(it=args.stop,dim=dim,k_rules=k_rules)
 
@@ -540,12 +566,30 @@ Skip;
 	if args.threads==1:
 		invoke = " {}form       -l {}".format('..{s}form{s}'.format(s=os.sep),             code_name)
 		print('run form:',invoke,file=sys.stderr)
+		sys.stderr.flush()
 		os.system(invoke)
 	else:
 		invoke = "{}tform -w{} -l {}".format('..{s}form{s}'.format(s=os.sep),args.threads,code_name)
 		print('run form:',invoke,file=sys.stderr)
+		sys.stderr.flush()
 		os.system(invoke)
-
+else: # if args.stop > last_out_N:
+	if ('out'+str(args.stop)) not in os.listdir():
+		# преобразовываем бинарный формат в текстовый
+		with open('convert.frm','w') as cf:
+			cf.write('''
+format mathematica;
+.sort
+load out{it}.sav;
+Skip;
+#write <out{it}> "%E" , N
+.end
+			'''.format(it=args.stop))
+		invoke = "{}form -l {}".format('..{s}form{s}'.format(s=os.sep),'convert.frm')
+		print('run form:',invoke,file=sys.stderr)
+		os.system(invoke)
+		
+		
 
 # преобразовываем stop в формат математики, если он меньше 100Мб
 if os.path.getsize('out{}'.format(args.stop))<100_000_000:
