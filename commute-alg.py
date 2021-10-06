@@ -57,6 +57,7 @@ if args.cont:
 	dim = int(dim)
 	stop = int(stop)
 	threads = int(threads)
+	k_rules = k_rules.strip()
 	
 	# обновляем параметры
 	if args.dim ==None: args.dim  = dim
@@ -79,7 +80,7 @@ if args.cont:
 			args.stop,'""',
 			args.threads,'""',
 			args.k_rules if args.k_rules!=None else '',
-		file=inf
+		file=inf,sep=''
 		)
 		
 	# устанавливаем code_name
@@ -176,7 +177,7 @@ print("H      ",args.H      ,file=sys.stderr)
 print("N      ",args.N      ,file=sys.stderr)
 print("stop   ",args.stop   ,file=sys.stderr)
 print("threads",args.threads,file=sys.stderr)
-print("k_rules",args.k_rules,file=sys.stderr)
+print("k_rules",repr(args.k_rules),file=sys.stderr)
 dim = args.dim
 	
 # ищем последний last_out
@@ -227,7 +228,7 @@ if args.stop > last_out_N:
 			while cur_s:
 				rule_k_list.append(cur_s)
 				cur_s = af.readline() # <---
-			k_rules = '\n'.join(rule_k_list).strip()
+			a_rules = '\n'.join(rule_k_list).strip()
 			
 	except FileNotFoundError:
 		print('не могу открыть файл алгебры',args.alg,file=sys.stderr)
@@ -236,7 +237,7 @@ if args.stop > last_out_N:
 	print('c_ops    ',c_ops		,file=sys.stderr)	
 	print('s_ops    ',s_ops		,file=sys.stderr)
 	#print('rules    ',rules		,file=sys.stderr)
-	print('k_rules  ',k_rules	,file=sys.stderr)
+	print('a_rules  ',repr(a_rules)	,file=sys.stderr)
 	
 	k_rules = \
 '''
@@ -244,7 +245,7 @@ argument koef;
 	{r1}
 	{r2}
 endargument;
-'''.format(r1=k_rules, r2=args.k_rules) if k_rules or args.k_rules else '' ;
+'''.format(r1=a_rules, r2=args.k_rules) if a_rules or args.k_rules else '' ;
 
 	print('k_rules final:',file=sys.stderr)
 	print(k_rules,file=sys.stderr)
@@ -485,18 +486,19 @@ Load {last_out};
 Global Ntmp = N;
 Global Htmp = H;
 .sort
-  skip Ntmp;
-  Delete storage;  * this clears all stored expressions
-  Drop Htmp;
-  G H = Htmp;
-  .sort
-  Hide H;
-  Drop Ntmp;
-  G N = Ntmp;
+skip Ntmp;
+Delete storage;  * this clears all stored expressions
+Drop Htmp;
+Drop Ntmp;
+G H = Htmp;
+G N = Ntmp;
+.sort
+Hide H;
 '''.format(last_out=last_out)
 )+\
 ''.join(
 '''
+.sort
 * === iteration {it} ===
 
 multiply left H;
@@ -517,17 +519,18 @@ save out{it}.sav;
 Global Ntmp = N;
 Global Htmp = H;
 .sort
-  skip Ntmp;
-  Delete storage;  * this clears all stored expressions
-  Drop Htmp;
-  G H = Htmp;
-  .sort
-  Hide H;
-  Drop Ntmp;
-  G N = Ntmp;
+skip Ntmp;
+Delete storage;  * this clears all stored expressions
+Drop Htmp;
+Drop Ntmp;
+G H = Htmp;
+G N = Ntmp;
+.sort
+Hide H;
 '''.format(it=i,dim=dim,k_rules=k_rules) for i in range(last_out_N+1,args.stop) 
 )+\
 '''
+.sort
 * === iteration {it} ===
 
 *Print "in  : %t";
