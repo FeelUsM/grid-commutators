@@ -1,0 +1,1 @@
+S(cx^3*cy*cz)*ii*koef(-192*v+256*v^2)+S(cx*cy^3*cz)*ii*koef(256*v^2-192*v^3)+S(cx*cy*cz)*ii*koef(-320*v-320*v^3)+S(cx*cy*cz^3)*ii*koef(-384*v^2)

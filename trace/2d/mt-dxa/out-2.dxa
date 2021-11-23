@@ -1,0 +1,1 @@
+S(cx^2)*koef(16*v^2)+S(cx^2*cy^2)*koef(-16*v+16*v^2)+S(cx^2*cz^2)*koef(32*v)+S(cy^2)*koef(-16*v)+S(cy^2*cz^2)*koef(-32*v^2)

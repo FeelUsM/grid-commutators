@@ -1,0 +1,1 @@
+S[cx^2*cy]*ii*koef[-48*hx]+S[cx*cy]*ii*koef[-64-48*hx^2-64*hz^2]+S[cx*cy*cz]*ii*koef[64*hz]+S[cy*cz]*ii*koef[64*hz*hx]+S[cy]*ii*koef[-48*hx-8*hx^3-8*hz^2*hx]
