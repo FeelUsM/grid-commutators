@@ -584,8 +584,10 @@ else: # if args.stop > last_out_N:
 format mathematica;
 .sort
 load out{it}.sav;
+L F = N;
+.sort
 Skip;
-#write <out{it}> "%E" , N
+#write <out{it}> "%E" , F
 .end
 			'''.format(it=args.stop))
 		invoke = "{}form -l {}".format('..{s}form{s}'.format(s=os.sep),'convert.frm')
