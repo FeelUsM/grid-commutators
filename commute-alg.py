@@ -4,7 +4,12 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser(
-	description = 'calculate k commutators [H,...[H,[H,N]]...]'
+	description = '''calculate k commutators [H,...[H,[H,N]]...]
+
+create codeX.frm
+and run it undef form or tform
+and convert result for mathematica
+'''
 )
 
 # -c --continue - всё прочитать из in файла и code.frm/log - добавляются, иначе всё перезаписывается
@@ -17,16 +22,17 @@ parser = argparse.ArgumentParser(
 # -t --threads t
 # -r --rules доп.правила преобразования коэфициентов
 
-parser.add_argument('--continue','-c',action='store_true',dest='cont')
-parser.add_argument('--force'   ,'-f',action='store_true')
-parser.add_argument('--dim'     ,'-d',type=int,choices=[1,2,3])
-parser.add_argument('--alg'     ,'-a')
-parser.add_argument('--syms'    ,'-S')
-parser.add_argument('--H'       ,'-H')
-parser.add_argument('--N'       ,'-N')
-parser.add_argument('--stop'    ,'-s',type=int)
-parser.add_argument('--threads' ,'-t',type=int)
-parser.add_argument('--rules'   ,'-r',dest='k_rules') # koefficient rules
+parser.add_argument('--print'   ,'-p',action='store_true'		,help='do not run form')
+parser.add_argument('--force'   ,'-f',action='store_true'		,help='do not ask for deleting already existing files')
+parser.add_argument('--continue','-c',action='store_true',dest='cont'	,help='continue from last out file, other arguments can be get from in file')
+parser.add_argument('--dim'     ,'-d',type=int,choices=[1,2,3]		,help='dimension')
+parser.add_argument('--alg'     ,'-a'					,help='algebra - one of names of .alg files')
+parser.add_argument('--syms'    ,'-S',default='{}'			,help='{list} of symbols (koefficients) used in H or N')
+parser.add_argument('--H'       ,'-H'					,help='for example "S[cx[1, 1]*cx[1, 2]] + v*S[cy[1, 1]*cy[2, 1]]"')
+parser.add_argument('--N'       ,'-N'					,help='for example "S[cx[1, 1]*cx[1, 2]]"')
+parser.add_argument('--stop'    ,'-s',type=int				,help='number of last commutator (which will be converted for mathematica)')
+parser.add_argument('--threads' ,'-t',type=int				,help='fumber of threads for form')
+parser.add_argument('--rules'   ,'-r',dest='k_rules'			,help='koefficients rules, which will be applied after each iteration')
 
 #print(sys.argv,file=sys.stderr)
 args = parser.parse_args()
@@ -286,7 +292,7 @@ endargument;
 	code = \
 '''
 on stats;
-off ThreadStats;
+on ThreadStats;
 
 * === {alg} {dim}d ===
 
@@ -567,15 +573,17 @@ Skip;
 		cf.write(code)
 	# вызываем code_name
 	if args.threads==1:
-		invoke = " {}form       -l {}".format('..{s}form{s}'.format(s=os.sep),             code_name)
+		invoke = " {}form       {} >> {}".format('..{s}form{s}'.format(s=os.sep),            code_name, code_name[0:-3]+'log')
 		print('run form:',invoke,file=sys.stderr)
 		sys.stderr.flush()
-		os.system(invoke)
+		if not args.print: 
+			os.system(invoke)
 	else:
-		invoke = "{}tform -w{} -l {}".format('..{s}form{s}'.format(s=os.sep),args.threads,code_name)
+		invoke = "{}tform -w{} {} >> {}".format('..{s}form{s}'.format(s=os.sep),args.threads,code_name, code_name[0:-3]+'log')
 		print('run form:',invoke,file=sys.stderr)
 		sys.stderr.flush()
-		os.system(invoke)
+		if not args.print: 
+			os.system(invoke)
 else: # if args.stop > last_out_N:
 	if ('out'+str(args.stop)) not in os.listdir():
 		# преобразовываем бинарный формат в текстовый
@@ -592,12 +600,15 @@ Skip;
 			'''.format(it=args.stop))
 		invoke = "{}form -l {}".format('..{s}form{s}'.format(s=os.sep),'convert.frm')
 		print('run form:',invoke,file=sys.stderr)
-		os.system(invoke)
+		if not args.print: 
+			os.system(invoke)
 		
 		
 
 # преобразовываем stop в формат математики, если он меньше 100Мб
-if os.path.getsize('out{}'.format(args.stop))<100_000_000:
+if args.print: 
+	pass
+elif os.path.getsize('out{}'.format(args.stop))<100_000_000:
 	with open('out{}'.format(args.stop), 'r') as f2:
 		with open('out', 'w') as f1:
 			f1.write(re.sub(r'[ \n\r\t\v]','',re.sub(r'\bi_\b','I',f2.read() #.replace('(','[').replace(')',']')
