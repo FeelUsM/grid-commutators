@@ -1,0 +1,56 @@
+#! /bin/bash
+set -m
+
+interval=$1
+outfile="$2"
+shift
+shift
+
+rm -f "$outfile"
+
+# iostat -dx /dev/sdb2  $interval >> "$outfile" &
+iostat -dx /dev/sdb2  $interval | sed -uE 's/^(.*)$/iostat:\1/' >> "$outfile" &
+# ~/f1 $interval     & # >> "$outfile" &
+iostat_pid=$!
+
+"$@" >> "$outfile" &
+com_pid=$!
+
+# top -b -d $interval -p $! >> "$outfile" &
+top -b -d $interval -p $! | sed -uE 's/^(.*)$/top:\1/' >> "$outfile" &
+# ~/f2 $interval $!  & # >> "$outfile" &
+top_pid=$!
+
+trap 'echo SIGINT;  kill %1; kill %2; kill %3; exit' SIGINT
+trap 'echo SIGKILL; kill %1; kill %2; kill %3; exit' SIGKILL
+
+echo start run $$
+jobs -l
+jobs -p
+ps -u filipp
+echo $iostat_pid
+echo $com_pid
+echo $top_pid
+
+fg 2
+sleep $interval
+sleep 5
+
+echo end run
+jobs -l
+jobs -p
+ps -u filipp
+echo $iostat_pid
+echo $top_pid
+
+kill %1 # $iostat_pid
+kill %3 # $top_pid
+
+echo end kill
+jobs -l
+jobs -p
+ps -u filipp
+echo $iostat_pid
+echo $com_pid
+echo $top_pid
+
